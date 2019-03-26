@@ -22,6 +22,7 @@ async function updateStatusQuery(bookingObject){
     sql.close()
 }
 
+
 async function updateBookingQuery(bookingObject) {
     const sqlConfig = require('../../../js/sqlconfig')
     const sql = require('mssql')
@@ -58,7 +59,8 @@ export default class Grid extends React.Component {
         this.state = {
             rows,
             selectedIndexes: [],
-            refresh: false
+            refresh: false,
+            paid: false
         }
 
         this._columns = [
@@ -72,7 +74,7 @@ export default class Grid extends React.Component {
             { key: 's', name: 'Saturday', width:70 },
             { key: 'amount', name: 'Amount', width:70 },
             { key: 'pay', name: 'Pay', width: 35 },
-            { key: 'status', name:"Status",width: 110},
+            { key: 'status', name:"Status",width: 80},
             { key: 'print', name: 'Print',width: 60 },
             { key: 'remove', name: 'Delete', width: 60 },
             { key: 'action', name: 'Action', width: 70}
@@ -114,6 +116,8 @@ export default class Grid extends React.Component {
        
     }
 
+   
+
     getStatus(booking){
         if(booking.Status == "NCI")
             return "Not Checked-In"
@@ -124,6 +128,11 @@ export default class Grid extends React.Component {
         else
             return "Checked-Out"
     }
+
+   
+
+
+
 
     changeState(obj){
 
@@ -193,6 +202,7 @@ export default class Grid extends React.Component {
             s: (day.includes("s")) ? 'X' : '',
             amount: amount.toFixed(2),
             status: this.getStatus(booking),
+            //paystatus: this.getPayStatus(booking),
             booking: booking
         }
         );
@@ -540,15 +550,20 @@ export default class Grid extends React.Component {
         this._rows = []
     }
 
+     
+
     getCellActions(column, row) {
-        if (column.key === 'pay') {
-            return [
+        
+        if (column.key === 'pay' && row.booking.Status == "CO") {
+            
+              return [
                 {
                     icon: 'glyphicon glyphicon-usd',
-                    callback: () => { this.getPayment(row.booking) }
+                    callback: () => { this.getPayment(row.booking)}
                 }
             ];
-        }
+          
+          }  
         if (column.key === 'print') {
             return [
                 {
@@ -570,7 +585,7 @@ export default class Grid extends React.Component {
             if(row.booking.Status === "NCI") {
                 return [
                 {
-                    icon: 'glyphicon glyphicon-plus-sign',
+                    icon: 'glyphicon glyphicon-minus',
                     callback: () => { this.changeState(row.booking) }
                 }
             ];
@@ -578,7 +593,7 @@ export default class Grid extends React.Component {
             else {
                 return [
                 {
-                    icon: 'glyphicon glyphicon-minus-sign',
+                    icon: 'glyphicon glyphicon-plus',
                     callback: () => { this.changeState(row.booking) }
                 }
             ];
@@ -591,6 +606,7 @@ export default class Grid extends React.Component {
     
     getPayment(obj) {
         this.props.payment(obj)
+        this.setState({pay : 'Paid'})
         //updateStatusQuery(obj)
     }
 
@@ -599,7 +615,7 @@ export default class Grid extends React.Component {
     }
 
     getList(curList) {
-        // console.log(curList)
+         
         return curList.map(obj =>
             <div key={obj.BookingID}>
                 {this.createRows(obj)}

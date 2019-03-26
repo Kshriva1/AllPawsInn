@@ -23,11 +23,9 @@ async function handleQuery(booking, taxToPay, totalToPay, extraServices) {
     let stat = booking.Status
     let bookingId = parseInt(booking.BookingID)
     let queryString = `UPDATE BookingObjects SET Status = '${booking.Status}' WHERE dbo.BookingObjects.BookingID = ${bookingId}`
-    queryString += ` INSERT INTO Payments (BookingID,OtherChargesPaid,TaxPaid,TotalChargesPaid,ExtraServices) Values ('${bookingId}' ,${otherCharges} ,${taxToPay} ,${totalToPay} , '${extraServices}')`
-
+    queryString += ` INSERT INTO Payments (BookingID,OtherChargesPaid,TaxPaid,TotalChargesPaid,ExtraServices) Values ('${bookingId}' ,${otherCharges} ,${taxToPay} ,${totalToPay} , '${extraServices}')`;
     let result = await pool.request()
         .query(queryString)
-
     sql.close()
 }
 
@@ -50,7 +48,9 @@ export default class Payment extends React.Component {
             extraServices: this.props.extraServices,
             taxToPay: 0,
             totalToPay: 0,
-            paymentFields: {}
+            paymentFields: {},
+            payStatus:false
+
         }
         this.getSubTotal = this.getSubTotal.bind(this)
         this.getTotal = this.getTotal.bind(this)
@@ -62,6 +62,7 @@ export default class Payment extends React.Component {
         this.extraServiceNames = this.extraServiceNames.bind(this)
         this.handleDeleteService = this.handleDeleteService.bind(this)
         this.dropdownSelected = this.dropdownSelected.bind(this)
+        this.getPaymentStatus(this.props.booking.BookingID);
         /*if (this.props.booking.Status == "CO") {
             this.getPaymentByBookingId(this.props.booking.BookingID);
         }*/
@@ -72,6 +73,19 @@ export default class Payment extends React.Component {
         this.setState({
             taxToPay: parseFloat(this.getTax(booking).toFixed(2)),
             totalToPay: parseFloat(this.getTotalToPay(booking).toFixed(2))
+        });
+    }
+
+
+   async getPaymentStatus(bookingId) {
+        const sqlConfig = require('../../js/sqlconfig');
+        const sql = require('mssql');
+        let pool = await sql.connect(sqlConfig);
+        let result = await pool.request()
+            .query("SELECT BookingID from dbo.Payments Where BookingID = " + bookingId);
+        sql.close();
+        this.setState({
+            payStatus:result.recordset[0]
         });
     }
 
@@ -87,7 +101,8 @@ export default class Payment extends React.Component {
         let selectedExtraIDs = result.recordset[0].ExtraServices.split(",");
         let dummySelectedExtras = [];
         selectedExtraIDs.forEach(obj => {
-            this.props.extraServices.forEach(obj2 => {
+            this.props.extraServices.fo
+            rEach(obj2 => {
                 if (obj2.ID == obj) {
                     dummySelectedExtras.push(obj2);
                 }
@@ -145,12 +160,12 @@ export default class Payment extends React.Component {
         let tax = this.getTax(booking)
         let pay = total + tax
 
-        return pay
+        return pay;
     }
 
     handleSubmit(event) {
         this.props.kennel_map[this.props.booking.KennelID] = 0
-        this.props.booking.Status = 'CO'
+       // this.props.booking.Status = 'CO'
         let extraServices = [];
         this.state.selectedExtras.forEach(obj => {
             extraServices.push(obj.ID);
@@ -159,8 +174,7 @@ export default class Payment extends React.Component {
         handleQuery(this.props.booking, this.state.taxToPay, this.state.totalToPay, extraServices.join())
         //query kennel map
         event.preventDefault();
-        this.props.updateScreen("calendar")
-
+        this.props.updateScreen("calendar"); 
     }
 
     handlePrintSubmit(event) {
@@ -319,8 +333,9 @@ export default class Payment extends React.Component {
         bookingChargesToPay = parseFloat(this.getTotal(booking).toFixed(2))
         //taxToPay = parseFloat(this.getTax(booking).toFixed(2))
         //totalToPay = parseFloat(this.getTotalToPay(booking).toFixed(2))
-        subToPay = parseFloat(this.getSubTotal(booking).toFixed(2))
-        /*if (booking.Status == "CO") {
+        subToPay = parseFloat(this.getSubTotal(booking).toFixed(2));
+
+          if(this.state.payStatus) {
             return (
                 <div className="box cal" id="paymentInput" style={left}>
                     <form>
@@ -392,8 +407,7 @@ export default class Payment extends React.Component {
 
             )
         }
-        else {*/
-        if (booking.Status == "CO") {
+        else {
             return (
                 <div className="box cal" id="paymentInput" style={left}>
                     <form>
@@ -465,9 +479,7 @@ export default class Payment extends React.Component {
                 </div>
             )
         }
-    }
-
-
+   }
 }
 
 const left = {
