@@ -9,6 +9,7 @@ let bookingChargesToPay = 0
 let subToPay = 0
 let extraServiceCharges = 0
 let otherCharges = 0
+let payStatus = 0;
 
 async function handleQuery(booking, taxToPay, totalToPay, extraServices) {
     const sqlConfig = require('../../js/sqlconfig')
@@ -48,9 +49,8 @@ export default class Payment extends React.Component {
             extraServices: this.props.extraServices,
             taxToPay: 0,
             totalToPay: 0,
-            paymentFields: {},
-            payStatus:false
-
+            paymentFields: {}
+        
         }
         this.getSubTotal = this.getSubTotal.bind(this)
         this.getTotal = this.getTotal.bind(this)
@@ -63,9 +63,7 @@ export default class Payment extends React.Component {
         this.handleDeleteService = this.handleDeleteService.bind(this)
         this.dropdownSelected = this.dropdownSelected.bind(this)
         this.getPaymentStatus(this.props.booking.BookingID);
-        /*if (this.props.booking.Status == "CO") {
-            this.getPaymentByBookingId(this.props.booking.BookingID);
-        }*/
+       
     }
     componentDidMount() {
         this.extraServiceNames();
@@ -82,11 +80,28 @@ export default class Payment extends React.Component {
         const sql = require('mssql');
         let pool = await sql.connect(sqlConfig);
         let result = await pool.request()
-            .query("SELECT BookingID from dbo.Payments Where BookingID = " + bookingId);
+            .query("SELECT top 1 * from dbo.Payments Where BookingID = " + bookingId);
         sql.close();
-        this.setState({
-            payStatus:result.recordset[0]
+        payStatus = result.recordset[0]
+        console.log(payStatus);
+        if(!payStatus) {
+            return;
+        } else {
+        
+        let selectedExtraIDs = result.recordset[0].ExtraServices.split(",");
+        let dummySelectedExtras = [];
+        selectedExtraIDs.forEach(obj => {
+            this.props.extraServices.forEach(obj2 => {
+                if (obj2.ID == obj) {
+                    dummySelectedExtras.push(obj2);
+                }
+            });
         });
+        this.setState({
+            selectedExtras: dummySelectedExtras,
+            paymentFields: result.recordset[0]
+        });
+      }
     }
 
 
@@ -101,8 +116,7 @@ export default class Payment extends React.Component {
         let selectedExtraIDs = result.recordset[0].ExtraServices.split(",");
         let dummySelectedExtras = [];
         selectedExtraIDs.forEach(obj => {
-            this.props.extraServices.fo
-            rEach(obj2 => {
+            this.props.extraServices.forEach(obj2 => {
                 if (obj2.ID == obj) {
                     dummySelectedExtras.push(obj2);
                 }
@@ -335,7 +349,7 @@ export default class Payment extends React.Component {
         //totalToPay = parseFloat(this.getTotalToPay(booking).toFixed(2))
         subToPay = parseFloat(this.getSubTotal(booking).toFixed(2));
 
-          if(this.state.payStatus) {
+          if(payStatus) {
             return (
                 <div className="box cal" id="paymentInput" style={left}>
                     <form>

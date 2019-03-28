@@ -631,7 +631,7 @@ export default class Grid extends React.Component {
     render() {
         this.emptyRows()
         const rowText = this.state.selectedIndexes.length === 1 ? 'row' : 'rows';
-        let curList = this.props.current.sort(function (a, b) { return a.DateIn < b.DateIn })
+        let curList = this.props.current;
         // TODO: Add first-to-last & last-to-first switch
         return (
             <div>

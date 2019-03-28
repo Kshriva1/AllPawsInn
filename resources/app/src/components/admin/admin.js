@@ -14,7 +14,7 @@ export default class Admin extends React.Component {
                 DayCareRate: "",
                 BookingRate: "",
                 Tax: "",
-                Discount: "",
+                Discount: ""
             },
             adminSettingList: null
         }
@@ -173,7 +173,7 @@ export default class Admin extends React.Component {
                                         Booking Rate($)
                         </th>
                                     <th>
-                                        Tax($)
+                                        Tax(%)
                         </th>
                                     <th>
                                         Discount($)
