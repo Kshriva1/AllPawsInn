@@ -74,7 +74,7 @@ export default class Grid extends React.Component {
             { key: 's', name: 'Saturday', width:70 },
             { key: 'amount', name: 'Amount', width:70 },
             { key: 'pay', name: 'Pay', width: 35 },
-            { key: 'status', name:"Status",width: 80},
+            { key: 'status', name:"Status",width: 95},
             { key: 'print', name: 'Print',width: 60 },
             { key: 'remove', name: 'Delete', width: 60 },
             { key: 'action', name: 'Action', width: 70}
@@ -298,7 +298,7 @@ export default class Grid extends React.Component {
                                 let taxRate = this.props.adminSetting.Tax;
 
                                 let tax = ((amount * taxRate) / 100)
-
+                                
                                 amount = amount + tax
                                 this._rows[rowIdx.rowIdx].amount = amount.toFixed(2)
                             }
