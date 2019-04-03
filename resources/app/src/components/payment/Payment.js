@@ -3,7 +3,7 @@
 import React from 'react';
 import Multiselect from 'react-bootstrap-multiselect';
 
-let bookingChargesToPay = 0
+
 //let taxToPay = 0
 //let totalToPay = 0
 let subToPay = 0
@@ -67,6 +67,7 @@ export default class Payment extends React.Component {
         this.handlePrintSubmit = this.handlePrintSubmit.bind(this)
         this.handleSubmit = this.handleSubmit.bind(this)
         this.handleChange = this.handleChange.bind(this)
+        this.handleChangeDiscount = this.handleChangeDiscount.bind(this)
         this.extraServiceNames = this.extraServiceNames.bind(this)
         this.handleDeleteService = this.handleDeleteService.bind(this)
         this.dropdownSelected = this.dropdownSelected.bind(this)
@@ -158,18 +159,7 @@ export default class Payment extends React.Component {
         let total = this.getSubTotal(booking)
         let discoRate = this.props.adminSetting.Discount;
 
-        /*if (Array.isArray(booking.Discount)) {
-            discoRate = booking.Discount[0]
-        }
-        else {
-            discoRate = booking.Discount
-        }*/
-
-        let disco = (total * discoRate) / 100
-
-        total -= disco
-
-        return total
+        return total - discoRate;
     }
 
     getTax(booking) {
@@ -213,7 +203,7 @@ export default class Payment extends React.Component {
         //if (event.target.value !== '') {
         otherCharges = (event.currentTarget.form[0].value !== '') ? parseFloat(event.currentTarget.form[0].value) : parseFloat(0);
 
-        let total = bookingChargesToPay + otherCharges + extraServiceCharges
+        let total = this.state.netBookingCharges + otherCharges + extraServiceCharges
 
         let taxRate = this.props.adminSetting.Tax;
 
@@ -247,6 +237,17 @@ export default class Payment extends React.Component {
         //}
     }
 
+    handleChangeDiscount(event) {
+
+      let changeDiscount = (event.currentTarget.form[0].value !== '') ? parseFloat(event.currentTarget.form[0].value) : "";
+
+      
+      this.setState({
+        discount: changeDiscount
+      })  
+
+    }
+
     extraServiceNames() {
         let services = this.state.extraServices;
         let service_list = [<option name={0} key={0} value={0}>--</option>];
@@ -277,7 +278,7 @@ export default class Payment extends React.Component {
 
         extraServiceCharges += parseFloat(keyVal[1]);
 
-        let total = bookingChargesToPay + otherCharges + extraServiceCharges
+        let total = this.state.netBookingCharges + otherCharges + extraServiceCharges
 
         let taxRate = this.props.adminSetting.Tax;
 
@@ -313,12 +314,16 @@ export default class Payment extends React.Component {
 
         extraServiceCharges -= parseFloat(selectedObj.Cost);
 
-        let total = bookingChargesToPay + otherCharges + extraServiceCharges
+        let total = this.state.netBookingCharges + otherCharges + extraServiceCharges
+        console.log(this.state.netBookingCharges,otherCharges,extraServiceCharges);
+
+
 
         let taxRate = this.props.adminSetting.Tax;
 
         let tax = ((total * taxRate) / 100)
         let taxToPay = (tax).toFixed(2);
+        console.log(taxToPay);
         let totalToPay = (tax + total).toFixed(2);
         //$('#txtTax').val((tax).toFixed(2));
         //$('#txtTotal').val((tax + total).toFixed(2));
@@ -392,7 +397,7 @@ export default class Payment extends React.Component {
                             <hr></hr>
                             <div className="row">
                                 <div className="col-sm-6"><b>Sub Total: $ </b>{this.state.paymentFields.SubTotal}<br></br></div>
-                                <div className="col-sm-6"><b>Discount: % </b>{this.state.paymentFields.Discount}<br></br></div>
+                                <div className="col-sm-6"><b>Discount: $ </b>{this.state.paymentFields.Discount}<br></br></div>
                                 {/*<div className="col-sm-6"><b>Discount: $ </b>{!Array.isArray(this.props.booking.Discount) ? this.props.booking.Discount : this.props.booking.Discount[0]}<br></br></div>*/}
                             </div>
                             <hr></hr>
@@ -466,7 +471,7 @@ export default class Payment extends React.Component {
                             <hr></hr>
                             <div className="row">
                                 <div className="col-sm-6"><b>Sub Total: $ </b>{this.state.subTotal}<br></br></div>
-                               <div className="col-sm-6"><b>Discount: % </b>{this.state.discount}<br></br></div>
+                               <div className="col-sm-6"><b>Discount: $ </b><input id="txtDiscount" name="discount" type="number" value={this.state.discount} onChange={this.handleChangeDiscount} /><br></br></div>
                                  {/*<div className="col-sm-6"><b>Discount: $ </b>{!Array.isArray(this.props.booking.Discount) ? this.props.booking.Discount : this.props.booking.Discount[0]}<br></br></div>*/}
                             </div>
                             <hr></hr>
