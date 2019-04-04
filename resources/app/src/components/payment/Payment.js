@@ -8,7 +8,6 @@ import Multiselect from 'react-bootstrap-multiselect';
 //let totalToPay = 0
 let subToPay = 0
 let extraServiceCharges = 0
-let otherCharges = 0
 let payStatus = 0;
 
 async function handleQuery(booking, taxToPay, totalToPay, dayCareRate,
@@ -57,7 +56,8 @@ export default class Payment extends React.Component {
             dayCareRate: 0,
             subTotal: 0,
             discount: 0,
-            netBookingCharges: 0
+            netBookingCharges: 0,
+            otherCharges: 0
             
         }
         this.getSubTotal = this.getSubTotal.bind(this)
@@ -201,7 +201,7 @@ export default class Payment extends React.Component {
 
     handleChange(event) {
         //if (event.target.value !== '') {
-        otherCharges = (event.currentTarget.form[0].value !== '') ? parseFloat(event.currentTarget.form[0].value) : parseFloat(0);
+        let otherCharges = (event.currentTarget.form[1].value !== '') ? parseFloat(event.currentTarget.form[1].value) : parseFloat(0);
 
         let total = this.state.netBookingCharges + otherCharges + extraServiceCharges
 
@@ -211,6 +211,7 @@ export default class Payment extends React.Component {
         let taxToPay = (tax).toFixed(2);
         let totalToPay = (tax + total).toFixed(2);
         this.setState({
+            otherCharges: otherCharges,
             taxToPay: taxToPay,
             totalToPay: totalToPay
         });
@@ -239,12 +240,26 @@ export default class Payment extends React.Component {
 
     handleChangeDiscount(event) {
 
-      let changeDiscount = (event.currentTarget.form[0].value !== '') ? parseFloat(event.currentTarget.form[0].value) : "";
-
+      let changeDiscount = (event.currentTarget.form[0].value !== '') ? parseFloat(event.currentTarget.form[0].value) : parseFloat(0);
       
+      let netBookingCharges = this.state.subTotal - changeDiscount;
+
+      let taxRate = this.props.adminSetting.Tax;
+
+        let tax = ((netBookingCharges * taxRate) / 100)
+        let taxToPay = (tax).toFixed(2);
+        let totalToPay = (tax + netBookingCharges + this.state.otherCharges + extraServiceCharges).toFixed(2);
+
+
+
+
       this.setState({
-        discount: changeDiscount
-      })  
+        discount:changeDiscount,
+        netBookingCharges : netBookingCharges,
+        taxToPay : taxToPay,
+        totalToPay : totalToPay
+    })
+        
 
     }
 
@@ -252,7 +267,7 @@ export default class Payment extends React.Component {
         let services = this.state.extraServices;
         let service_list = [<option name={0} key={0} value={0}>--</option>];
         for (let i = 0; i < services.length; i++) {
-            // if (services[i].Status == true)
+            // if (services[i].Status == true)s
             let val = services[i].ID + '-' + services[i].Cost;
             service_list.push(
                 <option key={services[i].ID} name={services[i].ID} value={val}>{services[i].ServiceName} (${services[i].Cost})</option>
@@ -278,7 +293,7 @@ export default class Payment extends React.Component {
 
         extraServiceCharges += parseFloat(keyVal[1]);
 
-        let total = this.state.netBookingCharges + otherCharges + extraServiceCharges
+        let total = this.state.netBookingCharges + this.state.otherCharges + extraServiceCharges
 
         let taxRate = this.props.adminSetting.Tax;
 
@@ -314,7 +329,7 @@ export default class Payment extends React.Component {
 
         extraServiceCharges -= parseFloat(selectedObj.Cost);
 
-        let total = this.state.netBookingCharges + otherCharges + extraServiceCharges
+        let total = this.state.netBookingCharges + this.state.otherCharges + extraServiceCharges
         console.log(this.state.netBookingCharges,otherCharges,extraServiceCharges);
 
 
@@ -471,13 +486,13 @@ export default class Payment extends React.Component {
                             <hr></hr>
                             <div className="row">
                                 <div className="col-sm-6"><b>Sub Total: $ </b>{this.state.subTotal}<br></br></div>
-                               <div className="col-sm-6"><b>Discount: $ </b><input id="txtDiscount" name="discount" type="number" value={this.state.discount} onChange={this.handleChangeDiscount} /><br></br></div>
+                               <div className="col-sm-6"><b>Discount: $ </b><input id="txtDiscount" name="discount" type="number" min="0" max={this.state.subTotal} value={this.state.discount} onChange={this.handleChangeDiscount} /><br></br></div>
                                  {/*<div className="col-sm-6"><b>Discount: $ </b>{!Array.isArray(this.props.booking.Discount) ? this.props.booking.Discount : this.props.booking.Discount[0]}<br></br></div>*/}
                             </div>
                             <hr></hr>
                             <div className="row">
                                 <div className="col-sm-6"><b>Net Booking Charges   $</b>{this.state.netBookingCharges}<br></br></div>
-                                <div className="col-sm-6"><b>Other Goods: $ </b><input name="others" type="number" onChange={this.handleChange} /><br></br></div>
+                                <div className="col-sm-6"><b>Other Goods: $ </b><input id="othrGoods" name="others" type="number" min="0" onChange={this.handleChange} /><br></br></div>
                             </div>
                             <hr></hr>
                             <div className="row">
