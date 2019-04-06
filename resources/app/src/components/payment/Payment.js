@@ -10,7 +10,7 @@ let subToPay = 0
 let extraServiceCharges = 0
 let payStatus = 0;
 
-async function handleQuery(booking, taxToPay, totalToPay, dayCareRate,
+async function handleQuery(booking, taxToPay, totalToPay, otherChargesPaid, dayCareRate,
         subTotal, discount, netBookingCharges, extraServices) {
     const sqlConfig = require('../../js/sqlconfig')
     const sql = require('mssql')
@@ -24,9 +24,9 @@ async function handleQuery(booking, taxToPay, totalToPay, dayCareRate,
     let stat = booking.Status
     let bookingId = parseInt(booking.BookingID)
     let queryString = `UPDATE BookingObjects SET Status = '${booking.Status}' WHERE dbo.BookingObjects.BookingID = ${bookingId}`
-    queryString += ` INSERT INTO Payments (BookingID,OtherChargersPaid,TaxPaid,TotalChargesPaid,ExtraServices
+    queryString += ` INSERT INTO Payments (BookingID,OtherChargesPaid,TaxPaid,TotalChargesPaid,ExtraServices
     ,DayCareRate,SubTotal,Discount,NetBookingCharges) Values 
-    ('${bookingId}' ,${otherCharges} ,${taxToPay} ,${totalToPay} , '${extraServices}', ${dayCareRate}, ${subTotal}
+    ('${bookingId}' ,${otherChargesPaid} ,${taxToPay} ,${totalToPay} , '${extraServices}', ${dayCareRate}, ${subTotal}
     , ${discount}, ${netBookingCharges})`;
     let result = await pool.request()
         .query(queryString)
@@ -57,8 +57,9 @@ export default class Payment extends React.Component {
             subTotal: 0,
             discount: 0,
             netBookingCharges: 0,
-            otherCharges: 0
-            
+            otherCharges: 0,
+            amountReceived: 0,
+            accountBalance: 0
         }
         this.getSubTotal = this.getSubTotal.bind(this)
         this.getTotal = this.getTotal.bind(this)
@@ -68,6 +69,7 @@ export default class Payment extends React.Component {
         this.handleSubmit = this.handleSubmit.bind(this)
         this.handleChange = this.handleChange.bind(this)
         this.handleChangeDiscount = this.handleChangeDiscount.bind(this)
+        this.handleAmountReceived = this.handleAmountReceived.bind(this)
         this.extraServiceNames = this.extraServiceNames.bind(this)
         this.handleDeleteService = this.handleDeleteService.bind(this)
         this.dropdownSelected = this.dropdownSelected.bind(this)
@@ -187,7 +189,7 @@ export default class Payment extends React.Component {
             extraServices.push(obj.ID);
         });
 
-        handleQuery(this.props.booking, this.state.taxToPay, this.state.totalToPay, this.state.dayCareRate,
+        handleQuery(this.props.booking, this.state.taxToPay, this.state.totalToPay, this.state.otherCharges, this.state.dayCareRate,
         this.state.subTotal, this.state.discount, this.state.netBookingCharges, 
          extraServices.join())
         //query kennel map
@@ -267,7 +269,7 @@ export default class Payment extends React.Component {
         let services = this.state.extraServices;
         let service_list = [<option name={0} key={0} value={0}>--</option>];
         for (let i = 0; i < services.length; i++) {
-            // if (services[i].Status == true)s
+            // if (services[i].Status == true)
             let val = services[i].ID + '-' + services[i].Cost;
             service_list.push(
                 <option key={services[i].ID} name={services[i].ID} value={val}>{services[i].ServiceName} (${services[i].Cost})</option>
@@ -330,7 +332,7 @@ export default class Payment extends React.Component {
         extraServiceCharges -= parseFloat(selectedObj.Cost);
 
         let total = this.state.netBookingCharges + this.state.otherCharges + extraServiceCharges
-        console.log(this.state.netBookingCharges,otherCharges,extraServiceCharges);
+        
 
 
 
@@ -338,7 +340,7 @@ export default class Payment extends React.Component {
 
         let tax = ((total * taxRate) / 100)
         let taxToPay = (tax).toFixed(2);
-        console.log(taxToPay);
+       
         let totalToPay = (tax + total).toFixed(2);
         //$('#txtTax').val((tax).toFixed(2));
         //$('#txtTotal').val((tax + total).toFixed(2));
@@ -376,6 +378,18 @@ export default class Payment extends React.Component {
     //    $('[name="tax"]').val((tax).toFixed(2));
     //    $('[name="total"]').val((tax + total).toFixed(2));
     //}
+
+    handleAmountReceived(event) {
+
+        let amountReceived = (event.currentTarget.form[6].value !== '') ? parseFloat(event.currentTarget.form[6].value) : parseFloat(0);
+        let accountBalance = this.state.totalToPay - amountReceived;
+
+        this.setState({
+            amountReceived : amountReceived,
+            accountBalance : accountBalance
+        }) 
+
+    }
     render() {
           
           if(payStatus) {
@@ -418,7 +432,7 @@ export default class Payment extends React.Component {
                             <hr></hr>
                             <div className="row">
                                 <div className="col-sm-6"><b>Net Booking Charges   $</b>{this.state.paymentFields.NetBookingCharges}<br></br></div>
-                                <div className="col-sm-6"><b>Other Goods: $ </b>{this.state.paymentFields.OtherChargesPaid}<br></br></div>
+                                <div className="col-sm-6"><b>Other Goods: $ </b>{this.state.paymentFields.OtherChargersPaid}<br></br></div>
                             </div>
                             <hr></hr>
                             <div className="row">
@@ -486,7 +500,7 @@ export default class Payment extends React.Component {
                             <hr></hr>
                             <div className="row">
                                 <div className="col-sm-6"><b>Sub Total: $ </b>{this.state.subTotal}<br></br></div>
-                               <div className="col-sm-6"><b>Discount: $ </b><input id="txtDiscount" name="discount" type="number" min="0" max={this.state.subTotal} value={this.state.discount} onChange={this.handleChangeDiscount} /><br></br></div>
+                               <div className="col-sm-6"><b>Discount: $ </b><input id="txtDiscount" name="discount" type="number" min='0' max={this.state.subTotal} value={this.state.discount} onChange={this.handleChangeDiscount} /><br></br></div>
                                  {/*<div className="col-sm-6"><b>Discount: $ </b>{!Array.isArray(this.props.booking.Discount) ? this.props.booking.Discount : this.props.booking.Discount[0]}<br></br></div>*/}
                             </div>
                             <hr></hr>
@@ -514,6 +528,11 @@ export default class Payment extends React.Component {
                                         })
                                     }
                                 </div>
+                            </div>
+                            <hr></hr>
+                            <div className="row">
+                                <div className="col-sm-6"><b>Acc Balance  $</b><input disabled id="AccBal" name="tax" type="text" value={this.state.accountBalance} /><br></br></div>
+                                <div className="col-sm-6"><b>Amt Received $</b><input id="AmtRecv" name="total" type="number" min='0' max={this.state.totalToPay} onChange={this.handleAmountReceived} value={this.state.amountReceived} /><br></br></div>
                             </div>
 
                         </div>
