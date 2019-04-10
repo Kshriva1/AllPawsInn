@@ -10,7 +10,7 @@ let subToPay = 0
 let extraServiceCharges = 0
 let payStatus = 0;
 
-async function handleQueryPayments(booking, taxToPay, totalToPay, otherChargesPaid, dayCareRate,
+/*async function handleQueryPayments(booking, taxToPay, totalToPay, otherChargesPaid, dayCareRate,
         subTotal, discount, netBookingCharges, extraServices) {
     const sqlConfig = require('../../js/sqlconfig')
     const sql = require('mssql')
@@ -32,22 +32,8 @@ async function handleQueryPayments(booking, taxToPay, totalToPay, otherChargesPa
         .query(queryString)
     sql.close()
 }
+*/
 
-async function handleQueryClientDetails(booking, accountBalance) {
-    const sqlConfig = require('../../js/sqlconfig')
-    const sql = require('mssql')
-    sql.close();
-    let pool = await sql.connect(sqlConfig)
-    let bookingId = parseInt(booking.BookingID)
-    let queryString1 = `SELECT dbo.ClientDetails.AccountBalance FROM dbo.ClientDetails WHERE dbo.ClientDetails.ClientID = ${booking.ClientID[0]}`;
-    let result1 = await pool.request()
-        .query(queryString1)  
-    let currBal = parseFloat(result1.recordset[0].AccountBalance) + parseFloat(accountBalance);
-    let queryString2 = `UPDATE dbo.ClientDetails SET dbo.ClientDetails.AccountBalance = ${currBal} WHERE dbo.ClientDetails.ClientID = ${booking.ClientID[0]}`;
-    let result2 = await pool.request()
-        .query(queryString2)
-    sql.close()
-}
 
 export default class Payment extends React.Component {
     constructor(props) {
@@ -74,8 +60,7 @@ export default class Payment extends React.Component {
             discount: 0,
             netBookingCharges: 0,
             otherCharges: 0,
-            amountReceived: 0,
-            accountBalance: 0
+            amountReceived: 0
         }
         this.getSubTotal = this.getSubTotal.bind(this)
         this.getTotal = this.getTotal.bind(this)
@@ -90,11 +75,11 @@ export default class Payment extends React.Component {
         this.handleDeleteService = this.handleDeleteService.bind(this)
         this.dropdownSelected = this.dropdownSelected.bind(this)
         this.getPaymentStatus(this.props.booking.BookingID);
-       
+        
     }
     componentDidMount(props) {
         this.extraServiceNames();
-        let booking = this.state.booking;
+        let booking = this.props.booking;
         this.setState({
             taxToPay: parseFloat(this.getTax(booking).toFixed(2)),
             totalToPay: parseFloat(this.getTotalToPay(booking).toFixed(2)),
@@ -106,10 +91,84 @@ export default class Payment extends React.Component {
         });
     }
 
+    async handleQueryClientDetails(taxToPay, totalToPay, otherChargesPaid, dayCareRate,
+        subTotal, discount, netBookingCharges, extraServices, bookingBalance, accountBalance) {
+        const sqlConfig = require('../../js/sqlconfig')
+        const sql = require('mssql')
+        let pool = await sql.connect(sqlConfig)
+        let bookingId = parseInt(this.props.booking.BookingID)
+        let stat = this.props.booking.Status
+        let id = this.props.booking.KennelID
+        let accBal = 0.00;
+        let udpateAccBal = false;
+        let queryString1 = `Select * from dbo.Payments Where dbo.Payments.BookingID = ${bookingId}`;
+        let result1 = await pool.request()
+            .query(queryString1)
+        
+        
+        if(!result1.recordset[0]) {
+
+           let queryString4 = "Update dbo.KennelOccupancy SET Occupancy = 0 WHERE ID = " + id
+            await pool.request()
+            .query(queryString4)
+
+        let queryString5 = `UPDATE BookingObjects SET Status = '${this.props.booking.Status}',TotalToPay=${this.state.totalToPay} WHERE dbo.BookingObjects.BookingID = ${bookingId}`
+        queryString5 += ` INSERT INTO Payments (BookingID,OtherChargesPaid,TaxPaid,TotalChargesPaid,ExtraServices
+        ,DayCareRate,SubTotal,Discount,NetBookingCharges) Values 
+        ('${bookingId}' ,${otherChargesPaid} ,${taxToPay} ,${totalToPay} , '${extraServices}', ${dayCareRate}, ${subTotal}
+        , ${discount}, ${netBookingCharges})`;
+        let result4 = await pool.request()
+            .query(queryString5)
+
+        let queryString6 = `Select AccountBalance from dbo.ClientDetails WHERE ClientID =` + this.props.booking.ClientID[0];
+        let result6 = await pool.request()
+            .query(queryString6)
+        
+        if(!result6.recordset[0].AccountBalance) {
+            accBal = parseFloat(accountBalance);
+        } else {
+            accBal = parseFloat(result6.recordset[0].AccountBalance) + parseFloat(accountBalance);
+            }
+
+        udpateAccBal = true;
+          
+        let queryString7 = `UPDATE dbo.ClientDetails SET AccountBalance = ${accBal} WHERE ClientID = ${this.props.booking.ClientID[0]}`
+        console.log('FRESH UPDATE:', accBal);
+        let result7 = await pool.request()
+            .query(queryString7)
+    }
+
+    let currBal = parseFloat(bookingBalance);
+    let queryString3 = `UPDATE dbo.BookingObjects SET dbo.BookingObjects.BookingCharge = ${currBal} WHERE dbo.BookingObjects.BookingID = ${this.props.booking.BookingID}`;
+
+    let result3 = await pool.request()
+        .query(queryString3)
+
+    if(!udpateAccBal) {
+        let queryString8 = `Select AccountBalance from dbo.ClientDetails WHERE ClientID =` + this.props.booking.ClientID[0];
+        let result8 = await pool.request()
+            .query(queryString8)
+
+        console.log('UPDATED BAL:', result8.recordset[0].AccountBalance);
+        console.log('AMT RECVD:', this.state.amountReceived);
+        accBal = parseFloat(result8.recordset[0].AccountBalance) - this.state.amountReceived;
+
+        console.log('ACC BAL BEFORE PUSH:', accBal);
+        let queryString9 = `UPDATE dbo.ClientDetails SET AccountBalance = ${accBal} WHERE ClientID = ${this.props.booking.ClientID[0]}`
+        let result9 = await pool.request()
+            .query(queryString9)
+
+        udpateAccBal = true;
+    }
+     
+    sql.close()
+}
+
 
    async getPaymentStatus(bookingId) {
         const sqlConfig = require('../../js/sqlconfig');
         const sql = require('mssql');
+        sql.close();
         let pool = await sql.connect(sqlConfig);
         let result = await pool.request()
             .query("SELECT top 1 * from dbo.Payments Where BookingID = " + bookingId);
@@ -201,16 +260,29 @@ export default class Payment extends React.Component {
         this.props.kennel_map[this.props.booking.KennelID] = 0
        // this.props.booking.Status = 'CO'
         let extraServices = [];
+        let bookingBalance = 0.00;
+        let accountBalance = 0.00;
+        if(this.props.booking.BookingCharge === 0 || this.props.booking.BookingCharge === null) {
+            bookingBalance = this.state.totalToPay - this.state.amountReceived;
+        } else {
+            bookingBalance = this.props.booking.BookingCharge - this.state.amountReceived;
+        }
+
+        accountBalance = this.state.totalToPay - this.state.amountReceived;
         this.state.selectedExtras.forEach(obj => {
             extraServices.push(obj.ID);
         });
 
-        handleQueryPayments(this.props.booking, this.state.taxToPay, this.state.totalToPay, this.state.otherCharges, this.state.dayCareRate,
+       /* handleQueryPayments(this.props.booking, this.state.taxToPay, this.state.totalToPay, this.state.otherCharges, this.state.dayCareRate,
         this.state.subTotal, this.state.discount, this.state.netBookingCharges, 
-         extraServices.join());
+         extraServices.join());*/
         
-        handleQueryClientDetails(this.props.booking, this.state.accountBalance);
+        this.handleQueryClientDetails(this.state.taxToPay, this.state.totalToPay, this.state.otherCharges, this.state.dayCareRate,
+        this.state.subTotal, this.state.discount, this.state.netBookingCharges, 
+         extraServices.join(), bookingBalance, accountBalance);
+
         event.preventDefault();
+
         this.props.updateScreen("calendar"); 
     }
 
@@ -398,18 +470,35 @@ export default class Payment extends React.Component {
 
     handleAmountReceived(event) {
 
-        let amountReceived = (event.currentTarget.form[6].value !== '') ? parseFloat(event.currentTarget.form[6].value) : parseFloat(0);
-        let accountBalance = (this.state.totalToPay - amountReceived).toFixed(2);
+        let amountReceived = 0.00;
+        amountReceived = (event.currentTarget.form[7].value !== '') ? parseFloat(event.currentTarget.form[7].value) : parseFloat(0);
+       
+        /*  console.log('PROPS ACC BAL:', this.props.booking.AccountBalance);
+        if(this.props.booking.AccountBalance === 0.00 || this.props.booking.AccountBalance === null) {
+            amountReceived = (event.currentTarget.form[6].value !== '') ? parseFloat(event.currentTarget.form[6].value) : parseFloat(0);
+            accountBalance = (this.state.totalToPay - amountReceived).toFixed(2);
+        }
+
+        else {
+            amountReceived = (event.currentTarget.form[6].value !== '') ? parseFloat(event.currentTarget.form[6].value) : parseFloat(0);
+            accountBalance = (this.props.booking.AccountBalance - amountReceived).toFixed(2);
+        }*/
+
+       /* console.log('AFTER trans');
+        console.log('Acc Bal:', accountBalance);
+        console.log('Amt Recvd:', amountReceived);*/
 
         this.setState({
-            amountReceived : amountReceived,
-            accountBalance : accountBalance
+            
+            amountReceived : amountReceived
+    
         }) 
 
     }
     render() {
-          
-          if(payStatus) {
+  
+          if(payStatus && this.props.booking.BookingCharge === 0.00) {
+        
             return (
                 <div className="box cal" id="paymentInput" style={left}>
                     <form>
@@ -483,7 +572,7 @@ export default class Payment extends React.Component {
             )
         }
         else {
-
+            
             return (
                 <div className="box cal" id="paymentInput" style={left}>
                     <form>
@@ -517,41 +606,83 @@ export default class Payment extends React.Component {
                             <hr></hr>
                             <div className="row">
                                 <div className="col-sm-6"><b>Sub Total: $ </b>{this.state.subTotal}<br></br></div>
-                               <div className="col-sm-6"><b>Discount: $ </b><input id="txtDiscount" name="discount" type="number" min='0' max={this.state.subTotal} value={this.state.discount} onChange={this.handleChangeDiscount} /><br></br></div>
+                               { payStatus ? 
+                                <div>
+                                   <div className="col-sm-6"><b>Discount: $ </b><input disabled id="txtDiscount" name="discount" type="number" min='0' max={this.state.subTotal} value={this.state.discount} /><br></br></div>
+                                </div> :
+                                <div>
+                                  <div className="col-sm-6"><b>Discount: $ </b><input id="txtDiscount" name="discount" type="number" min='0' max={this.state.subTotal} value={this.state.discount} onChange={this.handleChangeDiscount} /><br></br></div>
+                                </div>
+
+                              }  
+
+                        
                                  {/*<div className="col-sm-6"><b>Discount: $ </b>{!Array.isArray(this.props.booking.Discount) ? this.props.booking.Discount : this.props.booking.Discount[0]}<br></br></div>*/}
                             </div>
                             <hr></hr>
                             <div className="row">
                                 <div className="col-sm-6"><b>Net Booking Charges   $</b>{this.state.netBookingCharges}<br></br></div>
-                                <div className="col-sm-6"><b>Other Goods: $ </b><input id="othrGoods" name="others" type="number" min="0" onChange={this.handleChange} /><br></br></div>
+                                { payStatus ?
+                                    <div>
+                                     <div className="col-sm-6"><b>Other Goods: $ </b><input disabled id="othrGoods" name="others" type="number" min="0" /><br></br></div>
+                                    </div> :
+                                    <div>
+                                      <div className="col-sm-6"><b>Other Goods: $ </b><input id="othrGoods" name="others" type="number" min="0" onChange={this.handleChange} /><br></br></div>
+                                    </div>
+                                   } 
                             </div>
                             <hr></hr>
                             <div className="row">
                                 <div className="col-sm-6"><b>NY State Tax   $</b><input disabled id="txtTax" name="tax" type="text" value={this.state.taxToPay} /><br></br></div>
-                                <div className="col-sm-6"><b>Total To Pay   $</b><input disabled id="txtTotal" name="total" type="text" value={this.state.totalToPay} /><br></br></div>
+                                <div className="col-sm-6"><b>Total To Pay   $</b><input disabled id="txtTotal" style={{backgroundColor: "green", fontWeight:"bold",color:"white"}} name="total" type="text" value={!this.props.booking.TotalToPay ? this.state.totalToPay : this.props.booking.TotalToPay} /><br></br></div>
                             </div>
                             <hr></hr>
-                            <div className="row">
-                                <div className="col-sm-6"><b>Extras   </b>
-                                    <select onChange={this.dropdownSelected}>
-                                        {this.state.dropdown}
-                                    </select>
-                                </div>
+                               
+                                <div className="row">
+                                { payStatus ?
+                                    <div>
+                                        <div className="col-sm-6"><b>Extras   </b>
+                                            <select disabled onChange={this.dropdownSelected}>
+                                                {this.state.dropdown}
+                                            </select>
+                                        </div>
 
-                                <div className="col-sm-6">
-                                    {
-                                        this.state.selectedExtras.map((el) => {
-                                            return <p key={el.ServiceName}>{el.ServiceName} - ${el.Cost} <a title="delete" onClick={(e) => this.handleDeleteService(e, el.ID)}><span className="glyphicon glyphicon-trash" aria-hidden="true"></span></a></p>
-                                        })
-                                    }
-                                </div>
+                                        <div className="col-sm-6">
+                                            {
+                                                this.state.selectedExtras.map((el) => {
+                                                    return <p key={el.ServiceName}>{el.ServiceName} - ${el.Cost} <a title="delete" onClick={(e) => this.handleDeleteService(e, el.ID)}><span className="glyphicon glyphicon-trash" aria-hidden="true"></span></a></p>
+                                                })
+                                            }
+                                        </div>
+                                    </div> :
+
+                                    <div>
+                                        <div className="col-sm-6"><b>Extras   </b>
+                                            <select onChange={this.dropdownSelected}>
+                                                {this.state.dropdown}
+                                            </select>
+                                        </div>
+
+                                        <div className="col-sm-6">
+                                            {
+                                                this.state.selectedExtras.map((el) => {
+                                                    return <p key={el.ServiceName}>{el.ServiceName} - ${el.Cost} <a title="delete" onClick={(e) => this.handleDeleteService(e, el.ID)}><span className="glyphicon glyphicon-trash" aria-hidden="true"></span></a></p>
+                                                })
+                                            }
+                                        </div>
+                                    </div>
+                                }
                             </div>
+                            <hr style={{border: "none", borderBottom: "1px solid black"}}></hr>
+                            <div className="row">
+                                <div className="col-sm-6"><b>Book Balance $</b><input disabled id="BookBal" name="book" type="number" value={!this.props.booking.BookingCharge ? 0 : this.props.booking.BookingCharge} /><br></br></div>
+                                <div className="col-sm-6"><b>Acct Balance $</b><input disabled id="AcctBal" name="acctbal" type="number" value={!this.props.booking.AccountBalance ? this.state.totalToPay : (!payStatus) ? (this.props.booking.AccountBalance + this.state.totalToPay).toFixed(2) : this.props.booking.AccountBalance} /><br></br></div>
+                            </div>
+
                             <hr></hr>
                             <div className="row">
-                                <div className="col-sm-6"><b>Acc Balance  $</b><input disabled id="AccBal" name="tax" type="number" value={this.state.accountBalance} /><br></br></div>
-                                <div className="col-sm-6"><b>Amt Received $</b><input id="AmtRecv" name="total" type="number" min='0' max={this.state.totalToPay} onChange={this.handleAmountReceived} value={this.state.amountReceived} /><br></br></div>
+                              <div className="col-sm-6"><b>Amt Received $</b><input id="AmtRecv" name="total" type="number" min='0' max={!this.props.booking.TotalToPay ? this.state.totalToPay : this.props.booking.BookingCharge} onChange={this.handleAmountReceived} value={this.state.amountReceived} /><br></br></div>
                             </div>
-
                         </div>
                         <br></br>
                         <button className="profileButton" onClick={this.handleSubmit}> Take Payment </button>

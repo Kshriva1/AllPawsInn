@@ -219,19 +219,11 @@ export default class Grid extends React.Component {
         if(booking.Status === 'NCI' || booking.Status === 'CI') {
         amount = 0.00;
         } else {
-
-        amount = afterDiscount + tax;   
-            /*this.idExists(booking.BookingID)
-            .then(res => {
-               if(res) {
-                amount = res;
-                
+             if(!booking.TotalToPay) {
+                amount = afterDiscount + tax;   
             } else {
-                amount = afterDiscount + tax;
-                console.log(amount);
-
+                amount = booking.TotalToPay;
             }
-            })*/
            
         }
 
@@ -251,6 +243,8 @@ export default class Grid extends React.Component {
         );
     
     }
+
+
 
     rowGetter(i) {
         return this._rows[i];
@@ -638,6 +632,7 @@ export default class Grid extends React.Component {
     getCellActions(column, row) {
         
         if (column.key === 'pay' && row.booking.Status == "CO") {
+            if(row.booking.BookingCharge  > 0 || row.booking.BookingCharge === null) {
             
               return [
                 {
@@ -646,7 +641,18 @@ export default class Grid extends React.Component {
                 }
             ];
           
-          }  
+          } else if(row.booking.BookingCharge === 0) {
+              
+               return [
+                {
+                    icon: 'glyphicon glyphicon-ok',
+                    callback: () => { this.getPayment(row.booking)}
+                }
+            ];   
+
+          }
+
+         }  
         if (column.key === 'print') {
             return [
                 {
