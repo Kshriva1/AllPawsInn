@@ -335,7 +335,7 @@ export default class NewBooking extends React.Component {
                     }
 
                     <div id="submitInput">
-                        <input className="profileButton" type="Submit" value="Submit" />
+                        <input className="profileButton" type="Submit" defaultValue="Submit" />
                     </div>
 
 

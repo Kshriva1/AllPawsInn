@@ -143,6 +143,7 @@ export default class Payment extends React.Component {
 
     let result3 = await pool.request()
         .query(queryString3)
+    console.log('I"m in payments part');    
 
     if(!udpateAccBal) {
         let queryString8 = `Select AccountBalance from dbo.ClientDetails WHERE ClientID =` + this.props.booking.ClientID[0];
@@ -161,14 +162,14 @@ export default class Payment extends React.Component {
         udpateAccBal = true;
     }
      
-    sql.close()
+    sql.close();
+    this.props.updateScreen("home"); 
 }
 
 
    async getPaymentStatus(bookingId) {
         const sqlConfig = require('../../js/sqlconfig');
         const sql = require('mssql');
-        sql.close();
         let pool = await sql.connect(sqlConfig);
         let result = await pool.request()
             .query("SELECT top 1 * from dbo.Payments Where BookingID = " + bookingId);
@@ -283,7 +284,7 @@ export default class Payment extends React.Component {
 
         event.preventDefault();
 
-        this.props.updateScreen("calendar"); 
+        
     }
 
     handlePrintSubmit(event) {

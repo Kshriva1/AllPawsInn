@@ -6,7 +6,8 @@ import ReactDataGrid from 'react-data-grid';
 let rows = [];
 const rowGetter = rowNumber => rows[rowNumber];
 
-async function updateStatusQuery(bookingObject){
+/*async function updateStatusQuery(bookingObject){
+    console.log("Inside update status query");
     const sqlConfig = require('../../../js/sqlconfig')
     const sql = require('mssql')
     let pool = await sql.connect(sqlConfig)
@@ -20,7 +21,8 @@ async function updateStatusQuery(bookingObject){
          .query(queryString)
 
     sql.close()
-}
+    this.props.updateScreen("home");
+}*/
 
 
 async function updateBookingQuery(bookingObject) {
@@ -100,6 +102,7 @@ export default class Grid extends React.Component {
 
         let bookingId = parseInt(bookingObject.BookingID)
 
+
         let queryString = "DELETE FROM dbo.BookingObjects WHERE dbo.BookingObjects.BookingID = " + bookingId
 
         let result = await pool.request()
@@ -109,12 +112,38 @@ export default class Grid extends React.Component {
                 alert("Error")
             })
             .then(() => {
-                this.deleteRows(bookingId);
-                this.props.updateScreen("home");
+                this.deleteRows(bookingId); 
             })
-        sql.close()
        
+         let queryString2 = "SELECT * from dbo.BookingObjects ,dbo.VetDetails, dbo.Animals, dbo.ClientDetails where dbo.Animals.ClientID = dbo.ClientDetails.ClientID and dbo.Animals.AnimalID =  dbo.BookingObjects.AnimalID and dbo.ClientDetails.VetSurgeryId = dbo.VetDetails.ID and dbo.BookingObjects.DateOut > '2017-07-06 12:00:00.000'"     
+
+         let result2 = await pool.request()
+            .query(queryString2)
+         sql.close();
+        this.props.updateScreen("home");
     }
+
+    async updateStatusQuery(bookingObject){
+    const sqlConfig = require('../../../js/sqlconfig')
+    const sql = require('mssql')
+    let pool = await sql.connect(sqlConfig)
+
+    let stat = bookingObject.Status
+    let bookingId = parseInt(bookingObject.BookingID)
+
+    let queryString = "UPDATE dbo.BookingObjects SET dbo.BookingObjects.Status = '" + stat + "' WHERE dbo.BookingObjects.BookingID = " + bookingId
+
+    let result = await pool.request()
+         .query(queryString)
+
+    let queryString2 = "SELECT * from dbo.BookingObjects ,dbo.VetDetails, dbo.Animals, dbo.ClientDetails where dbo.Animals.ClientID = dbo.ClientDetails.ClientID and dbo.Animals.AnimalID =  dbo.BookingObjects.AnimalID and dbo.ClientDetails.VetSurgeryId = dbo.VetDetails.ID and dbo.BookingObjects.DateOut > '2017-07-06 12:00:00.000'"     
+
+      let result2 = await pool.request()
+         .query(queryString2)
+
+    sql.close()
+    this.props.updateScreen("home");
+}
 
    /* async idExists(bookingId) {
         const sqlConfig = require('../../../js/sqlconfig')
@@ -171,13 +200,13 @@ export default class Grid extends React.Component {
         if(obj.Status == "NCI"){
             status = "CI"
             obj.Status = status
-            updateStatusQuery(obj)
+            this.updateStatusQuery(obj)
         }
         else{
             if(obj.Status == "CI") {
                 status="CO"
                 obj.Status = status
-                 updateStatusQuery(obj)
+                 this.updateStatusQuery(obj)
              }
                 /*this.props.payment(obj)
             }
@@ -715,6 +744,7 @@ export default class Grid extends React.Component {
     deleteRows(bookingId) {
         let rows = this._rows.map(el => el.booking).slice()
         this._rows = rows.filter(row => row.BookingID !== bookingId)
+        
     }
 
     render() {
