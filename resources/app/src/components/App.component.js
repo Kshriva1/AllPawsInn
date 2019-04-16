@@ -71,13 +71,13 @@ export default class Main extends React.Component {
 			.query("SELECT * from dbo.BookingObjects ,dbo.VetDetails, dbo.Animals, dbo.ClientDetails where dbo.Animals.ClientID = dbo.ClientDetails.ClientID and dbo.Animals.AnimalID =  dbo.BookingObjects.AnimalID and dbo.ClientDetails.VetSurgeryId = dbo.VetDetails.ID and dbo.BookingObjects.DateOut > '2017-07-06 12:00:00.000'")
 		//if err sql.close
 		let num = await pool.request()
-			.query("SELECT top 1 * from dbo.BookingObjects order by BookingID desc")
+			.query("SELECT  * from dbo.BookingObjects order by BookingID desc")
 
 		let client = await pool.request()
-			.query("SELECT top 1 * from dbo.ClientDetails order by ClientID desc")
+			.query("SELECT  * from dbo.ClientDetails order by ClientID desc")
 
 		let animal = await pool.request()
-			.query("SELECT top 1 * from dbo.Animals order by AnimalID desc")
+			.query("SELECT  * from dbo.Animals order by AnimalID desc")
 
         let extraServices = await pool.request()
             .query("SELECT * FROM dbo.Services")
@@ -134,7 +134,9 @@ export default class Main extends React.Component {
 	}
 
 	updateScreen(new_screen){
+		console.log("Inside updateScreen");
 		this.grabDogs();
+		console.log("Running grabdogs again");
 		this.setState({
 			screen: new_screen
 		})

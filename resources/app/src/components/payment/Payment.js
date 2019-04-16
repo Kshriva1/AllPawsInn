@@ -676,8 +676,8 @@ export default class Payment extends React.Component {
                             </div>
                             <hr style={{border: "none", borderBottom: "1px solid black"}}></hr>
                             <div className="row">
-                                <div className="col-sm-6"><b>Book Balance $</b><input disabled id="BookBal" name="book" type="number" value={!this.props.booking.BookingCharge ? 0 : this.props.booking.BookingCharge} /><br></br></div>
-                                <div className="col-sm-6"><b>Acct Balance $</b><input disabled id="AcctBal" name="acctbal" type="number" value={!this.props.booking.AccountBalance ? this.state.totalToPay : (!payStatus) ? (this.props.booking.AccountBalance + this.state.totalToPay).toFixed(2) : this.props.booking.AccountBalance} /><br></br></div>
+                                <div className="col-sm-6"><b>Book Balance $</b><input disabled id="BookBal" name="book" type="number" value={!this.props.booking.BookingCharge ? '-' : this.props.booking.BookingCharge} /><br></br></div>
+                                <div className="col-sm-6"><b>Acct Balance $</b><input disabled id="AcctBal" name="acctbal" type="number" value={!this.props.booking.AccountBalance ? '-' : (!payStatus) ? (this.props.booking.AccountBalance + this.state.totalToPay).toFixed(2) : this.props.booking.AccountBalance} /><br></br></div>
                             </div>
 
                             <hr></hr>

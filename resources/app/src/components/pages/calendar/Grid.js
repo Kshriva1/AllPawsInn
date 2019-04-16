@@ -61,8 +61,8 @@ export default class Grid extends React.Component {
         this.state = {
             rows,
             selectedIndexes: [],
-            refresh: false,
-            paid: false
+            paid: false,
+            refresh: false
         }
 
         this._columns = [
@@ -96,14 +96,17 @@ export default class Grid extends React.Component {
     }
 
     async removeBooking(bookingObject) {
+        console.log("Inside removeBooking");
         const sqlConfig = require('../../../js/sqlconfig')
         const sql = require('mssql')
         let pool = await sql.connect(sqlConfig)
 
         let bookingId = parseInt(bookingObject.BookingID)
+        console.log("My Booking Id:", bookingId);
 
 
         let queryString = "DELETE FROM dbo.BookingObjects WHERE dbo.BookingObjects.BookingID = " + bookingId
+        console.log(queryString);
 
         let result = await pool.request()
             .query(queryString)
@@ -114,34 +117,26 @@ export default class Grid extends React.Component {
             .then(() => {
                 this.deleteRows(bookingId); 
             })
-       
-         let queryString2 = "SELECT * from dbo.BookingObjects ,dbo.VetDetails, dbo.Animals, dbo.ClientDetails where dbo.Animals.ClientID = dbo.ClientDetails.ClientID and dbo.Animals.AnimalID =  dbo.BookingObjects.AnimalID and dbo.ClientDetails.VetSurgeryId = dbo.VetDetails.ID and dbo.BookingObjects.DateOut > '2017-07-06 12:00:00.000'"     
-
-         let result2 = await pool.request()
-            .query(queryString2)
-         sql.close();
+        console.log("updating Screen");
         this.props.updateScreen("home");
     }
 
     async updateStatusQuery(bookingObject){
-    const sqlConfig = require('../../../js/sqlconfig')
-    const sql = require('mssql')
-    let pool = await sql.connect(sqlConfig)
+     console.log("Inside updateStatusQuery");   
+    const sqlConfig = require('../../../js/sqlconfig');
+    const sql = require('mssql');
+    let pool = await sql.connect(sqlConfig);
 
     let stat = bookingObject.Status
     let bookingId = parseInt(bookingObject.BookingID)
 
     let queryString = "UPDATE dbo.BookingObjects SET dbo.BookingObjects.Status = '" + stat + "' WHERE dbo.BookingObjects.BookingID = " + bookingId
-
+    console.log(queryString);
     let result = await pool.request()
-         .query(queryString)
+         .query(queryString);
 
-    let queryString2 = "SELECT * from dbo.BookingObjects ,dbo.VetDetails, dbo.Animals, dbo.ClientDetails where dbo.Animals.ClientID = dbo.ClientDetails.ClientID and dbo.Animals.AnimalID =  dbo.BookingObjects.AnimalID and dbo.ClientDetails.VetSurgeryId = dbo.VetDetails.ID and dbo.BookingObjects.DateOut > '2017-07-06 12:00:00.000'"     
-
-      let result2 = await pool.request()
-         .query(queryString2)
-
-    sql.close()
+    sql.close();
+    console.log("Updating screen");
     this.props.updateScreen("home");
 }
 
@@ -220,6 +215,8 @@ export default class Grid extends React.Component {
         this.setState({
             val : 1 
         })
+
+        event.preventDefault();
     }
 
     getNextAction(booking){
@@ -286,8 +283,8 @@ export default class Grid extends React.Component {
 
         if (this.state.refresh) {
             count++; // hack for update data-grid
-            this.setState({
-                refresh: false
+             this.setState({
+                 refresh: false
             });
         }
 

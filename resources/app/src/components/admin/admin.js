@@ -83,8 +83,8 @@ export default class Admin extends React.Component {
         //this.props.adminSetting.Discount = event.currentTarget.form[3].value;
 
         this.handleQuery(this.state.adminSetting)
-        this.state.adminSettingList.push(this.state.adminSetting);
-        this.props.updateScreen("admin");
+        //this.state.adminSettingList.push(this.state.adminSetting);
+        //this.props.updateScreen("admin");
 
     }
 
