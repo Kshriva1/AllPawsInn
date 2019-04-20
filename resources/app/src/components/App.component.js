@@ -68,7 +68,7 @@ export default class Main extends React.Component {
 		//if err sql.close
 		// "SELECT top 1 * from dbo.BookingObjects order by BookingID desc" // returns most recently assigned ID
 		let bookings = await pool.request()
-			.query("SELECT * from dbo.BookingObjects ,dbo.VetDetails, dbo.Animals, dbo.ClientDetails where dbo.Animals.ClientID = dbo.ClientDetails.ClientID and dbo.Animals.AnimalID =  dbo.BookingObjects.AnimalID and dbo.ClientDetails.VetSurgeryId = dbo.VetDetails.ID and dbo.BookingObjects.DateOut > '2017-07-06 12:00:00.000'")
+			.query("SELECT * from dbo.BookingObjects ,dbo.VetDetails, dbo.Animals, dbo.ClientDetails where dbo.Animals.ClientID = dbo.ClientDetails.ClientID and dbo.Animals.AnimalID =  dbo.BookingObjects.AnimalID and dbo.ClientDetails.VetSurgeryId = dbo.VetDetails.ID")
 		//if err sql.close
 		let num = await pool.request()
 			.query("SELECT  * from dbo.BookingObjects order by BookingID desc")
