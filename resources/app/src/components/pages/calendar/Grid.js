@@ -5,6 +5,7 @@ import ReactDataGrid from 'react-data-grid';
 
 let rows = [];
 const rowGetter = rowNumber => rows[rowNumber];
+let todayDate = (new Date(Date.now())).toString().substring(0,15);
 
 /*async function updateStatusQuery(bookingObject){
     console.log("Inside update status query");
@@ -93,6 +94,9 @@ export default class Grid extends React.Component {
         this.getStatus = this.getStatus.bind(this)
         this.getNextAction = this.getNextAction.bind(this)
         this.changeState = this.changeState.bind(this)
+        this.getMonthIndex = this.getMonthIndex.bind(this)
+        this.dateCompare = this.dateCompare.bind(this)
+        this.getDayIndex = this.getDayIndex.bind(this)
     }
 
     async removeBooking(bookingObject) {
@@ -122,22 +126,85 @@ export default class Grid extends React.Component {
     }
 
     async updateStatusQuery(bookingObject){
-     console.log("Inside updateStatusQuery");   
-    const sqlConfig = require('../../../js/sqlconfig');
-    const sql = require('mssql');
-    let pool = await sql.connect(sqlConfig);
 
-    let stat = bookingObject.Status
-    let bookingId = parseInt(bookingObject.BookingID)
+        console.log('Status',bookingObject.Status);
+        console.log("Inside updateStatusQuery");   
+         let stat = bookingObject.Status
+        console.log("Stat",stat);
+        const sqlConfig = require('../../../js/sqlconfig');
+        const sql = require('mssql');
+        let pool = await sql.connect(sqlConfig);
 
-    let queryString = "UPDATE dbo.BookingObjects SET dbo.BookingObjects.Status = '" + stat + "' WHERE dbo.BookingObjects.BookingID = " + bookingId
-    console.log(queryString);
-    let result = await pool.request()
-         .query(queryString);
+       
+        let bookingId = parseInt(bookingObject.BookingID)
+        let accbal = 0.00;
+        let day = (bookingObject.Days)
+        let rate = 0;
+        rate = this.props.adminSetting.DayCareRate;
+        let total = bookingObject.NoDays * rate
+        let discoRate = this.props.adminSetting.Discount
+        let afterDiscount = total - discoRate;
+        let taxRate = this.props.adminSetting.Tax;
+        let tax = ((afterDiscount * taxRate) / 100);
+        let amount = 0.00;
+        if(bookingObject.Status === 'CI') {
+        amount = 0.00;
+        } else {
+             if(!bookingObject.TotalToPay) {
+                amount = afterDiscount + tax;   
+            } else {
+                amount = bookingObject.TotalToPay;
+            }
+           
+        }
+        if(stat === "CI") {
 
-    sql.close();
-    console.log("Updating screen");
-    this.props.updateScreen("home");
+        let queryString = `UPDATE dbo.BookingObjects SET dbo.BookingObjects.Status = '${stat}' ,dbo.BookingObjects.TodayDate ='${todayDate}'  WHERE dbo.BookingObjects.BookingID = ${bookingId}`
+        console.log(queryString);
+        let result = await pool.request()
+             .query(queryString);
+          } else if(stat === "CO") {
+              console.log("Inside CO")
+              let queryString2 = `UPDATE dbo.BookingObjects SET dbo.BookingObjects.Status = '${stat}' WHERE dbo.BookingObjects.BookingID = ${bookingId}`
+              let result2 = await pool.request()
+                   .query(queryString2);
+
+              let queryString3 = `SELECT dbo.ClientDetails.AccountBalance FROM dbo.ClientDetails WHERE dbo.ClientDetails.ClientID=${bookingObject.ClientID[0]}`;
+              
+              let result3 = await pool.request()
+                   .query(queryString3);
+
+              
+             
+              if(!result3.recordset[0].AccountBalance) {
+                console.log("updating accountbalance");
+                let queryString4 =  `Update dbo.ClientDetails SET dbo.ClientDetails.AccountBalance = ${amount} WHERE dbo.ClientDetails.ClientID = ${bookingObject.ClientID[0]}`;
+                console.log(queryString4);
+                let result4 = await pool.request()
+                   .query(queryString4);
+                console.log("Result of updating",result4)   
+                let queryString7 =  `Select dbo.ClientDetails.AccountBalance FROM dbo.ClientDetails`;
+                
+                let result7 = await pool.request()
+                   .query(queryString7);
+                console.log(result7.recordset[0].AccountBalance);   
+        
+              } else {
+                console.log("Inside CO else")
+                accbal = bookingObject.TotalToPay + result3.recordset[0].AccountBalance;
+                let queryString5 =  `Update dbo.ClientDetails SET dbo.ClientDetails.AccountBalance = ${amount + accbal} WHERE dbo.ClientDetails.ClientID = ${bookingObject.ClientID[0]}`;
+                let result4 = await pool.request()
+                   .query(queryString5);                
+
+              }
+
+                  
+          }
+
+
+        sql.close();
+        console.log("Updating screen");
+        this.props.updateScreen("home");
 }
 
    /* async idExists(bookingId) {
@@ -193,9 +260,16 @@ export default class Grid extends React.Component {
         let status = '';
 
         if(obj.Status == "NCI"){
+            let d = this.getDayIndex(todayDate.substring(0,3));
+            if(!(obj.Days).includes(d)) {
+              
+              alert("Select today to check in!!");
+            } else {
+            
             status = "CI"
             obj.Status = status
             this.updateStatusQuery(obj)
+          }
         }
         else{
             if(obj.Status == "CI") {
@@ -230,9 +304,99 @@ export default class Grid extends React.Component {
             return "Check-Out"
     }
 
+    getMonthIndex(month) {
+        switch (month) {
+            case 'Jan':
+                return 1;
+                break;
+            case 'Feb':
+                return 2;
+                break;
+            case 'Mar':
+                return 3;
+                break;
+            case 'Apr':
+                return 4;
+                break;
+            case 'May':
+                return 5;
+                break;
+            case 'Jun':
+                return 6;
+                break;
+            case 'Jul':
+                return 7;
+                break;
+            case 'Aug':
+                return 8;
+                break;
+            case 'Sep':
+                return 9;
+                break;
+            case 'Oct':
+                return 10;
+                break;
+            case 'Nov':
+                return 11;
+                break;
+            case 'Dec':
+                return 12;
+                break;
+        }
+    }
 
+    getDayIndex(day) {
+        switch (day) {
+            case 'Mon':
+                return 'm';
+                break;
+            case 'Tue':
+                return 't';
+                break;
+            case 'Wed':
+                return 'w';
+                break;
+            case 'Thu':
+                return 'r';
+                break;
+            case 'Fri':
+                return 'f';
+                break;
+            case 'Sat':
+                return 's';
+                break;
+            
+        }
+    }
+
+    dateCompare(currentDate, bookingDate) {
+        let currMonth = this.getMonthIndex(currentDate.substring(4,7))
+        let bookMonth = this.getMonthIndex(bookingDate.substring(4,7))
+
+        let currDay = parseInt(currentDate.substring(8,10))
+        let bookDay = parseInt(bookingDate.substring(8,10))
+
+        let currYear = parseInt(currentDate.substring(11))
+        let bookYear = parseInt(bookingDate.substring(11))
+
+        if(currYear > bookYear || currMonth > bookMonth || currDay > bookDay)
+            return true;
+        else
+            return false;
+    }
 
     createRows(booking) {
+        
+        // if(todayDate > booking.TodayDate) {
+        //     booking.Status = "NCI";
+        // }
+        if(booking.TodayDate) {
+        console.log("COMPARE", this.dateCompare(todayDate, booking.TodayDate));
+        if (this.dateCompare(todayDate, booking.TodayDate)) {
+            booking.Status = "NCI";
+            //booking.Days = booking.Days + this.getDayIndex(todayDate.substring(0,3));        
+        }
+    }
         let day = (booking.Days)
         let rate = 0;
         rate = this.props.adminSetting.DayCareRate;
@@ -268,7 +432,7 @@ export default class Grid extends React.Component {
         }
         );
     
-    }
+    };
 
 
 
@@ -657,8 +821,8 @@ export default class Grid extends React.Component {
 
     getCellActions(column, row) {
         
-        if (column.key === 'pay' && row.booking.Status == "CO") {
-            if(row.booking.BookingCharge  > 0 || row.booking.BookingCharge === null) {
+        if (column.key === 'pay') {
+            if(row.booking.AccountBalance  > 0) {
             
               return [
                 {
@@ -667,7 +831,7 @@ export default class Grid extends React.Component {
                 }
             ];
           
-          } else if(row.booking.BookingCharge === 0) {
+          } else if(row.booking.AccountBalance === 0) {
               
                return [
                 {
@@ -676,7 +840,9 @@ export default class Grid extends React.Component {
                 }
             ];   
 
-          }
+          }  
+
+          
 
          }  
         if (column.key === 'print') {
@@ -687,7 +853,7 @@ export default class Grid extends React.Component {
                 }
             ];
         }
-        if (column.key === 'remove' && row.booking.Status != "CO") {
+        if (column.key === 'remove' && row.booking.Status != "CO" && (!row.booking.AccountBalance)) {
             return [
                 {
                     icon: 'glyphicon glyphicon-trash',
