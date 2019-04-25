@@ -29,6 +29,7 @@ export default class Main extends React.Component {
            
 		}
 		this.grabDogs()
+		this.get_daycare = this.get_daycare.bind(this)
 	}
 
 	componentWillMount(){
@@ -46,15 +47,20 @@ export default class Main extends React.Component {
 		this.new_dog = this.new_dog.bind(this)
 		this.get_client = this.get_client.bind(this)
 		this.get_payment = this.get_payment.bind(this)
-		this.get_daycare = this.get_daycare.bind(this)
+		//this.get_daycare = this.get_daycare.bind(this)
 		this.push_alert = this.push_alert.bind(this)
 		this.push_notif = this.push_notif.bind(this)
 		this.get_print = this.get_print.bind(this)
+		this.sqlParse = this.sqlParse.bind(this)
+		this.toDatetime = this.toDatetime.bind(this)
+		this.dateNow = this.dateNow.bind(this)
+		this.dateOut = this.dateOut.bind(this)
+		this.forceDate = this.forceDate.bind(this)
 		
 	}
 
 	async grabDogs(){
-
+       
 		// insert => "INSERT INTO dbo.Colours (ColourName) VALUES ('Blue')"
 		// delete => "DELETE FROM [KMDB].[dbo].[BookingObjects] where BookingID > 16805"
 		// select => "SELECT * FROM dbo.Animals"
@@ -132,15 +138,14 @@ export default class Main extends React.Component {
 			notifications : tmp
 		})
 	}
-
+    
 	updateScreen(new_screen){
-		console.log("Inside updateScreen");
 		this.grabDogs();
-		console.log("Running grabdogs again");
 		this.setState({
 			screen: new_screen
 		})
 	}
+ 
 
 	toggle_side(query){
 		this.setState({
@@ -197,7 +202,8 @@ export default class Main extends React.Component {
 		})
 	}
 
-	get_daycare(animal){
+	async get_daycare(animal){
+
 		let date = new Date(Date.now())
 		let day = date.toString().substring(0, 3)
 
@@ -225,7 +231,8 @@ export default class Main extends React.Component {
 		let sqlArray = []
 
 		for(let i = 0; i<animal.length;i++){
-			this.state.id_object.booking_id++ 
+			this.state.id_object.booking_id++
+
 			let sql_obj = {
 				DayCare : 1,
 				NoDays : 1,
@@ -258,29 +265,104 @@ export default class Main extends React.Component {
 			this.state.booking_list.unshift(newobj)
 
 		}
+	
 
-		booking_lib.create_booking(sqlArray, false)
+		//booking_lib.create_booking(sqlArray, false)
+		if(!Number.isInteger(sqlArray.KennelID))
+			sqlArray.KennelID = sqlArray.KennelID*1
+		
+		let pool = await sql.connect(sqlConfig)
+
+		for(let i = 0; i < sqlArray.length; i++){
+			let new_booking = JSON.parse(JSON.stringify(sqlArray[i]))
+			this.forceDate(new_booking)
+
+			new_booking.DateIn = new_booking.DateIn.toString()
+			new_booking.DateOut = new_booking.DateOut.toString()
+
+			let keys = ''
+			let values = ''
+			for (let key in new_booking){
+				keys = keys + key + ', '
+				if(typeof new_booking[key] === 'string')
+					values = values + `'${new_booking[key]}'` + ', '
+				else
+					values = values + new_booking[key] + ', '
+			}
+
+			values = values.slice(0, -2) //trim off the extra comma and whitespace
+			keys = keys.slice(0, -2)
+			let qr = `INSERT INTO BookingObjects (${keys}) VALUES (${values})`
+			await pool.request()
+				.query(qr)
+
+			let qr2 = `Update dbo.KennelOccupancy SET Occupancy = 1 WHERE ID = ${new_booking.KennelID}`
+			await pool.request()
+				.query(qr2)
+		}
+
+		sql.close()
 
 		this.setState({
 			animal : animal,
-			screen : "home",
+			screen : 'home'
 		})
+		
+       this.grabDogs();
 	}
+
+	 sqlParse(val){ //sql requires date values to be in 02-07-2018 rather than 2-7-2017
+			if (val < 10)
+				return '0' + val
+			else
+				return val
+		}
+
+	 toDatetime(date){ // THIS IS PROBABLY INFACT Date.toISOString
+			let formatted = `${date.getFullYear()}-${this.sqlParse(date.getMonth() + 1)}-${this.sqlParse(date.getDate())} ${this.sqlParse(date.getHours())}:${this.sqlParse(date.getMinutes())}:${this.sqlParse(date.getSeconds())}`
+			return formatted
+		}
+
+	 dateNow(){
+			let dt = new Date ()
+			return dt
+		}
+
+	 dateOut(epoch){
+			//use an epoch converter to build the check out date
+			//epoch is to supposed to be the appointment duration
+			let dt = new Date (Date.now() + 604800000)
+			return dt
+		}
+
+	 forceDate(booking){
+			if(booking.DayCare){
+				booking.DateIn = this.toDatetime(new Date(Date.now()))
+				booking.DateOut = booking.DateIn
+			}
+			else{
+				booking.DateIn = this.toDatetime(new Date(Date.parse(booking.DateIn)))
+				booking.DateOut = this.toDatetime(new Date(Date.parse(booking.DateOut)))
+			}
+		}
+		
+
+
 
 	
 
 	render(){
 		//order props neatly
 		//pay booking && booking is passed as undefined
-		console.log('screen',this.state.screen);
 		return(
 			<div style={{backgroundColor: "#D3D3D3"}}>
 				<Navbar updateScreen = {this.updateScreen} side = {this.toggle_side} dogs = {this.state.dog_list}/>
                 <div className='wrapper'>
                     <Screen new_dog={this.new_dog} kennel_map={this.state.kennel_map} print={this.get_print} boz={this.state.bozun_objesi} updateScreen={this.updateScreen} payment={this.get_payment} booking={this.state.payBooking} id_object={this.state.id_object} animal={this.state.animal} screen={this.state.screen} dogs={this.state.dog_list} bookings={this.state.booking_list} extraServices={this.state.extraService_List} adminSettingTable={this.state.adminSetting_List} currentId={this.state.booking} adminSetting = {this.state.adminSetting}/>
-					<Sidescreen alerts = {this.state.alerts} notifications = {this.state.notifications} push_notif = {this.push_notif} push_alert = {this.push_alert} daycare = {this.get_daycare} client = {this.get_client} profile = {this.full_profile} proc = {this.grab_animal} dogs = {this.state.dog_list} query = {this.state.query} side = {this.toggle_side_off} sidescreen = {this.state.sidescreen}/>
+					<Sidescreen alerts = {this.state.alerts} notifications = {this.state.notifications} push_notif = {this.push_notif} updateScreen={this.updateScreen} push_alert = {this.push_alert} daycare = {this.get_daycare} client = {this.get_client} profile = {this.full_profile} proc = {this.grab_animal} dogs = {this.state.dog_list} query = {this.state.query} side = {this.toggle_side_off} sidescreen = {this.state.sidescreen}/>
 				</div>
 			</div>
 		);
 	}
 }
+
