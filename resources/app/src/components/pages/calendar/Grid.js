@@ -134,8 +134,8 @@ export default class Grid extends React.Component {
         let day = (bookingObject.Days)
         let rate = 0;
         rate = this.props.adminSetting.DayCareRate;
-        let total = bookingObject.NoDays * rate
-        let discoRate = this.props.adminSetting.Discount
+        let total = rate
+        let discoRate = this.props.adminSetting.Discount;
         let afterDiscount = total - discoRate;
         let taxRate = this.props.adminSetting.Tax;
         let tax = ((afterDiscount * taxRate) / 100);
@@ -150,30 +150,19 @@ export default class Grid extends React.Component {
             }
            
         }
-        let date = this.toDatetime(new Date(Date.now()));
+
         if(stat === "CI") {
 
-        let queryString = `UPDATE dbo.BookingObjects SET dbo.BookingObjects.Status = '${stat}' ,dbo.BookingObjects.TodayDate ='${todayDate}',dbo.BookingObjects.DateIn='${date}'  WHERE dbo.BookingObjects.BookingID = ${bookingId}`
+        let queryString = `UPDATE dbo.BookingObjects SET dbo.BookingObjects.Status = '${stat}' ,dbo.BookingObjects.TodayDate ='${todayDate}',dbo.BookingObjects.CheckDateIn='${(new Date(Date.now())).toString()}'  WHERE dbo.BookingObjects.BookingID = ${bookingId}`
         let result = await pool.request()
              .query(queryString);
           } else if(stat === "CO") {
               console.log("CO");
-              let queryString2 = `UPDATE dbo.BookingObjects SET dbo.BookingObjects.Status = '${stat}',dbo.BookingObjects.DateOut='${date}' WHERE dbo.BookingObjects.BookingID = ${bookingId}`
+              let queryString2 = `UPDATE dbo.BookingObjects SET dbo.BookingObjects.Status = '${stat}',dbo.BookingObjects.CheckDateOut='${(new Date(Date.now())).toString()}' WHERE dbo.BookingObjects.BookingID = ${bookingId}`
               console.log(queryString2);
               let result2 = await pool.request()
                    .query(queryString2);
-
-               
-               let queryString9 = `Select * From dbo.ClientDetails Where dbo.ClientDetails.ClientID = ${bookingObject.ClientID[0]}`;
-                console.log(queryString9);
-               let result9 = await pool.request()
-                   .query(queryString9);  
-                
-
-              let queryString8 = `INSERT INTO Payments (BookingID,OtherChargesPaid,TaxPaid,TotalChargesPaid,ExtraServices,DayCareRate,SubTotal,Discount,NetBookingCharges,FirstName,LastName) Values (${bookingId},0,0,0,0,0,0,0,0,'${result9.recordset[0].FirstName}','${result9.recordset[0].LastName}')`;
-               console.log(queryString8);
-              let result8 = await pool.request()
-                   .query(queryString8);     
+  
 
               let queryString3 = `SELECT dbo.ClientDetails.AccountBalance FROM dbo.ClientDetails WHERE dbo.ClientDetails.ClientID=${bookingObject.ClientID[0]}`;
               
@@ -184,56 +173,21 @@ export default class Grid extends React.Component {
                 let queryString4 =  `Update dbo.ClientDetails SET dbo.ClientDetails.AccountBalance = ${amount} WHERE dbo.ClientDetails.ClientID = ${bookingObject.ClientID[0]}`;
                 let result4 = await pool.request()
                    .query(queryString4);
-                let queryString7 =  `Select dbo.ClientDetails.AccountBalance FROM dbo.ClientDetails`;
                 
-                let result7 = await pool.request()
-                   .query(queryString7);
                 
               } else {
-                accbal = bookingObject.TotalToPay + result3.recordset[0].AccountBalance;
-                let queryString5 =  `Update dbo.ClientDetails SET dbo.ClientDetails.AccountBalance = ${amount + accbal} WHERE dbo.ClientDetails.ClientID = ${bookingObject.ClientID[0]}`;
-                let result4 = await pool.request()
+                accbal = amount + result3.recordset[0].AccountBalance;
+                let queryString5 =  `Update dbo.ClientDetails SET dbo.ClientDetails.AccountBalance = ${accbal} WHERE dbo.ClientDetails.ClientID = ${bookingObject.ClientID[0]}`;
+                let result5 = await pool.request()
                    .query(queryString5);                
 
               }
-
                   
           }
-
 
         sql.close();
         this.props.updateScreen("home");
 }
-
-   /* async idExists(bookingId) {
-        const sqlConfig = require('../../../js/sqlconfig')
-        const sql = require('mssql')
-        sql.close();
-        let pool = await sql.connect(sqlConfig)
-        let totalChargesPaid = 0;
-
-        let queryString = "SELECT TotalChargesPaid from Payments Where BookingID =" + bookingId ;
-
-        let result = await pool.request()
-            .query(queryString)
-            .catch((err) => {
-                
-                alert("Error")
-            })
-            
-            if(result.recordset[0]) {
-
-                totalChargesPaid = result.recordset[0].TotalChargesPaid;
-            } else {
-
-                totalChargesPaid = result.recordset[0];
-            }
-        
-
-            sql.close()
-
-            return totalChargesPaid;
-    } */
 
    
     getStatus(booking){
@@ -251,10 +205,7 @@ export default class Grid extends React.Component {
 
     changeState(obj){
 
-        // NCO - Not Checked Out
-        // NCI - Not Checked In
-        // CO - Checked Out
-        // CI - Checked In
+       
         let status = '';
 
         if(obj.Status == "NCI"){
@@ -406,7 +357,7 @@ export default class Grid extends React.Component {
         let day = (booking.Days)
         let rate = 0;
         rate = this.props.adminSetting.DayCareRate;
-        let total = booking.NoDays * rate
+        let total = rate
         let discoRate = this.props.adminSetting.Discount
         let afterDiscount = total - discoRate;
         let taxRate = this.props.adminSetting.Tax;
@@ -501,7 +452,7 @@ export default class Grid extends React.Component {
                         if (dayNo <= 1) {
                             if (this._rows[rowIdx.rowIdx].m !== 'X') {
                                 this._rows[rowIdx.rowIdx].m = 'X';
-                                /*this._rows[rowIdx.rowIdx].booking.NoDays = this._rows[rowIdx.rowIdx].booking.NoDays + 1*/
+                                this._rows[rowIdx.rowIdx].booking.NoDays = this._rows[rowIdx.rowIdx].booking.NoDays + 1
                                 if (this._rows[rowIdx.rowIdx].booking.NoDays <= 2) {
                                 
                                     this._rows[rowIdx.rowIdx].booking.DayCareRate = this.props.adminSetting.DayCareRate; //21.99
@@ -529,7 +480,7 @@ export default class Grid extends React.Component {
                                 }
                                 if (this._rows[rowIdx.rowIdx].booking.NoDays !== 1) {
                                     this._rows[rowIdx.rowIdx].m = ''
-                                    /*this._rows[rowIdx.rowIdx].booking.NoDays = this._rows[rowIdx.rowIdx].booking.NoDays - 1*/
+                                    this._rows[rowIdx.rowIdx].booking.NoDays = this._rows[rowIdx.rowIdx].booking.NoDays - 1
                                     if (this._rows[rowIdx.rowIdx].booking.NoDays <= 2) {
                                         this._rows[rowIdx.rowIdx].booking.DayCareRate = this.props.adminSetting.DayCareRate; //21.99
                                     }
@@ -555,7 +506,7 @@ export default class Grid extends React.Component {
                         if (dayNo <= 2) {
                             if (this._rows[rowIdx.rowIdx].t !== 'X') {
                                 this._rows[rowIdx.rowIdx].t = 'X'
-                                /*this._rows[rowIdx.rowIdx].booking.NoDays = this._rows[rowIdx.rowIdx].booking.NoDays + 1*/
+                                this._rows[rowIdx.rowIdx].booking.NoDays = this._rows[rowIdx.rowIdx].booking.NoDays + 1
                                 if (this._rows[rowIdx.rowIdx].booking.NoDays <= 2) {
                                     this._rows[rowIdx.rowIdx].booking.DayCareRate = this.props.adminSetting.DayCareRate; //21.99
                                 }
@@ -580,7 +531,7 @@ export default class Grid extends React.Component {
                                 }
                                 if (this._rows[rowIdx.rowIdx].booking.NoDays !== 1) {
                                     this._rows[rowIdx.rowIdx].t = ''
-                                   /* this._rows[rowIdx.rowIdx].booking.NoDays = this._rows[rowIdx.rowIdx].booking.NoDays - 1*/
+                                    this._rows[rowIdx.rowIdx].booking.NoDays = this._rows[rowIdx.rowIdx].booking.NoDays - 1
                                     if (this._rows[rowIdx.rowIdx].booking.NoDays <= 2) {
                                         this._rows[rowIdx.rowIdx].booking.DayCareRate = this.props.adminSetting.DayCareRate; // 21.99
                                     }
@@ -605,7 +556,7 @@ export default class Grid extends React.Component {
                         if (dayNo <= 3) {
                             if (this._rows[rowIdx.rowIdx].w !== 'X') {
                                 this._rows[rowIdx.rowIdx].w = 'X'
-                                /*this._rows[rowIdx.rowIdx].booking.NoDays = this._rows[rowIdx.rowIdx].booking.NoDays + 1*/
+                                this._rows[rowIdx.rowIdx].booking.NoDays = this._rows[rowIdx.rowIdx].booking.NoDays + 1
                                 if (this._rows[rowIdx.rowIdx].booking.NoDays <= 2) {
                                     this._rows[rowIdx.rowIdx].booking.DayCareRate = this.props.adminSetting.DayCareRate; //21.99
                                 }
@@ -613,7 +564,7 @@ export default class Grid extends React.Component {
                                     this._rows[rowIdx.rowIdx].booking.DayCareRate = this.props.adminSetting.DayCareRate; //17.99
                                 }
                                 this._rows[rowIdx.rowIdx].booking.Days = this._rows[rowIdx.rowIdx].booking.Days + 'w'
-                                 let total = this._rows[rowIdx.rowIdx].booking.NoDays * this._rows[rowIdx.rowIdx].booking.DayCareRate
+                                 /*let total = this._rows[rowIdx.rowIdx].booking.NoDays * this._rows[rowIdx.rowIdx].booking.DayCareRate*/
                                      /*let discoRate = this.props.adminSetting.Discount;
                                      let afterDiscount = total - discoRate;
                                      let taxRate = this.props.adminSetting.Tax;
@@ -630,7 +581,7 @@ export default class Grid extends React.Component {
                                 }
                                 if (this._rows[rowIdx.rowIdx].booking.NoDays !== 1) {
                                     this._rows[rowIdx.rowIdx].w = ''
-                                    /*this._rows[rowIdx.rowIdx].booking.NoDays = this._rows[rowIdx.rowIdx].booking.NoDays - 1*/
+                                    this._rows[rowIdx.rowIdx].booking.NoDays = this._rows[rowIdx.rowIdx].booking.NoDays - 1
                                     if (this._rows[rowIdx.rowIdx].booking.NoDays <= 2) {
                                         this._rows[rowIdx.rowIdx].booking.DayCareRate = this.props.adminSetting.DayCareRate; //21.99
                                     }
@@ -656,7 +607,7 @@ export default class Grid extends React.Component {
                         if (dayNo <= 4) {
                             if (this._rows[rowIdx.rowIdx].r !== 'X') {
                                 this._rows[rowIdx.rowIdx].r = 'X'
-                                /*this._rows[rowIdx.rowIdx].booking.NoDays = this._rows[rowIdx.rowIdx].booking.NoDays + 1*/
+                                this._rows[rowIdx.rowIdx].booking.NoDays = this._rows[rowIdx.rowIdx].booking.NoDays + 1
                                 if (this._rows[rowIdx.rowIdx].booking.NoDays <= 2) {
                                     this._rows[rowIdx.rowIdx].booking.DayCareRate = this.props.adminSetting.DayCareRate; //21.99
                                 }
@@ -681,7 +632,7 @@ export default class Grid extends React.Component {
                                 }
                                 if (this._rows[rowIdx.rowIdx].booking.NoDays !== 1) {
                                     this._rows[rowIdx.rowIdx].r = ''
-                                    /*this._rows[rowIdx.rowIdx].booking.NoDays = this._rows[rowIdx.rowIdx].booking.NoDays - 1*/
+                                    this._rows[rowIdx.rowIdx].booking.NoDays = this._rows[rowIdx.rowIdx].booking.NoDays - 1
                                     if (this._rows[rowIdx.rowIdx].booking.NoDays <= 2) {
                                         this._rows[rowIdx.rowIdx].booking.DayCareRate = this.props.adminSetting.DayCareRate; //21.99
                                     }
@@ -707,7 +658,7 @@ export default class Grid extends React.Component {
                         if (dayNo <= 5) {
                             if (this._rows[rowIdx.rowIdx].f !== 'X') {
                                 this._rows[rowIdx.rowIdx].f = 'X'
-                                /*this._rows[rowIdx.rowIdx].booking.NoDays = this._rows[rowIdx.rowIdx].booking.NoDays + 1*/
+                                this._rows[rowIdx.rowIdx].booking.NoDays = this._rows[rowIdx.rowIdx].booking.NoDays + 1
                                 if (this._rows[rowIdx.rowIdx].booking.NoDays <= 2) {
                                     this._rows[rowIdx.rowIdx].booking.DayCareRate = this.props.adminSetting.DayCareRate; //21.99
                                 }
@@ -732,7 +683,7 @@ export default class Grid extends React.Component {
                                 }
                                 if (this._rows[rowIdx.rowIdx].booking.NoDays !== 1) {
                                     this._rows[rowIdx.rowIdx].f = ''
-                                    /*this._rows[rowIdx.rowIdx].booking.NoDays = this._rows[rowIdx.rowIdx].booking.NoDays - 1*/
+                                    this._rows[rowIdx.rowIdx].booking.NoDays = this._rows[rowIdx.rowIdx].booking.NoDays - 1
                                     if (this._rows[rowIdx.rowIdx].booking.NoDays <= 2) {
                                         this._rows[rowIdx.rowIdx].booking.DayCareRate = this.props.adminSetting.DayCareRate; //21.99
                                     }
@@ -758,7 +709,7 @@ export default class Grid extends React.Component {
                         if (dayNo <= 6) {
                             if (this._rows[rowIdx.rowIdx].s !== 'X') {
                                 this._rows[rowIdx.rowIdx].s = 'X'
-                                /*this._rows[rowIdx.rowIdx].booking.NoDays = this._rows[rowIdx.rowIdx].booking.NoDays + 1*/
+                                this._rows[rowIdx.rowIdx].booking.NoDays = this._rows[rowIdx.rowIdx].booking.NoDays + 1
                                 if (this._rows[rowIdx.rowIdx].booking.NoDays <= 2) {
                                 }
                                 else {

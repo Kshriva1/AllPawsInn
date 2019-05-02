@@ -67,7 +67,7 @@ export default class Main extends React.Component {
 
 		// catch errors in this block
 		// fill out empty id's before pushing the sql
-		sql.close();
+		
 		let pool = await sql.connect(sqlConfig)
 		let result = await pool.request()
 			.query("SELECT * from dbo.Animals, dbo.VetDetails, dbo.ClientDetails where dbo.Animals.ClientID = dbo.ClientDetails.ClientID and dbo.ClientDetails.VetSurgeryId = dbo.VetDetails.ID")
@@ -88,10 +88,10 @@ export default class Main extends React.Component {
         let extraServices = await pool.request()
             .query("SELECT * FROM dbo.Services")
 
-         let adminSetting = await pool.request()
+        let adminSetting = await pool.request()
              .query("SELECT top 1 * FROM dbo.AdminSetting Where IsActive = 1")
 
-         let adminSettingTable = await pool.request()
+        let adminSettingTable = await pool.request()
               .query("SELECT * FROM dbo.AdminSetting");    
 
 		let kennel_map = await pool.request()
@@ -354,6 +354,7 @@ export default class Main extends React.Component {
 	render(){
 		//order props neatly
 		//pay booking && booking is passed as undefined
+		console.log(this.state.screen)
 		return(
 			<div style={{backgroundColor: "#D3D3D3"}}>
 				<Navbar updateScreen = {this.updateScreen} side = {this.toggle_side} dogs = {this.state.dog_list}/>
