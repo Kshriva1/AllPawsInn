@@ -37,15 +37,22 @@ export default class Tax extends React.Component {
       let result = await pool.request()
             .query(query);
 
-      console.log("tax query", query);
-      console.log("result", result.recordset[0])
       sql.close();
+      if(!result.recordset[0]){
+      	this.setState({
+      	FirstName: FirstName,
+      	LastName: LastName,
+      	totalTaxPaid: "The user has paid no tax in this quarter",
+      	totalAmountPaid: "The user has not paid any amount in this quarter"
+      	})
+      } else {
       this.setState({
       	FirstName: result.recordset[0].FirstName,
       	LastName: result.recordset[0].LastName,
       	totalTaxPaid: result.recordset[0].TaxPaid,
       	totalAmountPaid: result.recordset[0].TotalChargesPaid
-      })
+       })
+      }
 
      }
 
@@ -117,12 +124,12 @@ export default class Tax extends React.Component {
 	                   <p className="text-info"> {this.state.LastName} </p>
 	                 </div>                 
 	                 <div>
-	                   <p className="font-weight-bold"> Total Tax Paid: </p>
-	                   <p className="text-info">${this.state.totalTaxPaid}</p>
+	                   <p className="font-weight-bold"> Total Tax Paid: $</p>
+	                   <p className="text-info">{this.state.totalTaxPaid}</p>
 	                 </div>                 
 	                 <div>
-	                   <p className="font-weight-bold"> Total Amount Paid: </p>
-	                   <p className="text-info">${this.state.totalAmountPaid}</p>
+	                   <p className="font-weight-bold"> Total Amount Paid: $</p>
+	                   <p className="text-info">{this.state.totalAmountPaid}</p>
 	                 </div>                 
                     </div>
                  <span className="print"><button className="profileButton" onClick={this.handlePrint}> Print </button></span>
